@@ -1,0 +1,1 @@
+.\PreliminaryJudge_win_1.exe -f 0 -m maps\map1.txt "python sdk/main.py"
