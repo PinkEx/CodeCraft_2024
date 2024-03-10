@@ -36,7 +36,6 @@ def preprocess():
             if p2b[i][j] == 0:
                 n_bl += 1
                 search_block(i, j, n_bl)
-    # sys.stderr.write(f"number of block: {n_bl}\n")
 
 def input_map():
     for i in range(len_env):
@@ -79,8 +78,6 @@ def input_map():
         )
 
     preprocess()
-    
-    # sys.stderr.write("Prepreocess Done!\n")
 
     OK = input()
     print("OK")
@@ -100,7 +97,8 @@ def input_frame() -> int:
     # Goods Information
     n_g_new = int(input())
     for i in range(n_g_new):
-        x, y, value = map(int, input().split())
+        x, y, value = map(int, input().split(" "))
+        if value < 100: continue
         goods.append(
             Good(
                 id=len(goods),
@@ -124,17 +122,9 @@ def input_frame() -> int:
             if robots[i].good_taken == -1:
                 new_target_goods = []
                 for g in goods:
-                    if goods[g.id].available(frame=frame_id):
+                    if g.available(frame=frame_id) and g.dis[x][y] <= 100:
                         new_target_goods.append(g.id)
                 robots[i].target_goods = new_target_goods[:]
-
-                # for g in goods:
-                #     if goods[g.id].available(frame=frame_id):
-                #         if g.id not in robots[i].target_goods:
-                #             robots[i].target_goods.append(g.id)
-                #     else:
-                #         if g.id in robots[i].target_goods:
-                #             robots[i].target_goods.remove(g.id)
             else:
                 robots[i].target_berths = []
                 for b in berths:
@@ -144,7 +134,7 @@ def input_frame() -> int:
 
     # Boats Information
     for i in range(n_bo):
-        status, pos = map(int, input().split())
+        status, pos = map(int, input().split(" "))
         boats[i].status = status
         boats[i].pos = pos
 

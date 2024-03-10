@@ -13,7 +13,8 @@ def robot_dispatch(frame_id: int):
         p2r[robots[i].pos.x][robots[i].pos.y] = i
 
     for i in range(n_r):
-        if frame_id < i * 10: continue
+        if frame_id < i: # async starts
+            continue
         good_id = robots[i].get()
         if good_id != -1:
             goods[good_id].taken = True
@@ -60,7 +61,7 @@ def boat_dispatch(framd_id: int):
 
     ordered_berths = sorted(
         berths,
-        key=lambda b: len(b.goods_temp),
+        key=lambda b: sum([goods[g].value for g in b.goods_temp]), # len(b.goods_temp),
         reverse=True
     )
     for k in range(n_be):
@@ -84,7 +85,8 @@ def solve_frame(frame_id: int):
     
     # sys.stderr.write(f"[FRAME {frame_id}]\n")
     # for b in berths:
-    #     sys.stderr.write(f"berth {b.id} occupied by {b.occupied}, reserved by {b.reserved}: {b.goods_temp}\n")
+    #     sum_values = sum([goods[g].value for g in b.goods_temp])
+    #     sys.stderr.write(f"berth {b.id} occupied by {b.occupied} of total value {sum_values}, reserved by {b.reserved}: {b.goods_temp}\n")
     #     if b.reserved != -1:
     #         sys.stderr.write(f"reserver: boat {b.reserved} (state: {boats[b.reserved].status} to berth {boats[b.reserved].pos})\n")
     #     if b.occupied != -1:

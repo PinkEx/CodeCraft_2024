@@ -64,7 +64,7 @@ class Robot:
         else: # to pull a good on a berth
             score = func_eval_to_good(self.pos, Position(x, y), self.target_goods)
         if self.last_dir == direction: # encourage to keep direction
-            score *= 1.0001
+            score *= 1.001
         elif (self.last_dir ^ direction) == 1: # discourage to turn back
-            score *= 0.0001
+            score *= 0.001
         return score

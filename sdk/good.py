@@ -30,7 +30,7 @@ class Good:
         self.dis[self.pos.x][self.pos.y] = 0
         while queue:
             p = queue.popleft()
-            if self.dis[p.x][p.y] >= 80: return
+            if self.dis[p.x][p.y] > 100: return
             for direction in range(4):
                 x, y = p.x + mv[direction][0], p.y + mv[direction][1]
                 if func_outside_map(x, y): # outside the map
