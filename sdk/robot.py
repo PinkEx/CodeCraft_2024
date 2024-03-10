@@ -20,7 +20,7 @@ class Robot:
         self.pos = Position(x, y)
         self.running = True
         self.good_taken = -1
-        self.last_dir = -1 # -1: not cared; 0/1/2/3: L/R/U/D
+        self.last_dir = -1 # -1: not cared; 0/1/2/3: R/L/U/D
         self.target_goods = []
         self.target_berths = []
     

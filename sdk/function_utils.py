@@ -34,7 +34,7 @@ def func_eval_to_good(ori: Position, pos: Position, target_goods: List[int]):
         1.0 / (goods[g].dis[pos.x][pos.y] + 0.5) - 1.0 / (goods[g].dis[ori.x][ori.y] + 0.5)
         for g in target_goods
     ]
-    scores = heapq.nlargest(3, scores)
+    scores = heapq.nlargest(4, scores)
     scores.reverse()
     score = 0
     for s in scores:
@@ -46,7 +46,7 @@ def func_eval_to_berth(ori: Position, pos: Position, target_berths: List[int]):
         1.0 / (berths[b].dis[pos.x][pos.y] + 0.5) - 1.0 / (berths[b].dis[ori.x][ori.y] + 0.5)
         for b in target_berths
     ]
-    scores = heapq.nlargest(3, scores)
+    scores = heapq.nlargest(4, scores)
     scores.reverse()
     score = 0
     for s in scores:

@@ -91,14 +91,15 @@ def input_frame() -> int:
         return -1
 
     for g in goods:
-        if not g.available(frame=frame_id):
+        if not g.available(frame=frame_id) and p2i[g.pos.x][g.pos.y] == g.id:
             p2i[g.pos.x][g.pos.y] = -1
     
     # Goods Information
     n_g_new = int(input())
     for i in range(n_g_new):
         x, y, value = map(int, input().split(" "))
-        if value < 100: continue
+        if value < 60: # good of low value
+            continue
         goods.append(
             Good(
                 id=len(goods),
@@ -114,7 +115,7 @@ def input_frame() -> int:
     # Robots Information
     for i in range(n_r):
         good_taken, x, y, status = map(int, input().split(" "))
-        if not good_taken:
+        if good_taken == 0:
             robots[i].good_taken = -1
         robots[i].pos = Position(x, y)
         robots[i].running = (status == 1)
