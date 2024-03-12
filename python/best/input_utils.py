@@ -98,7 +98,7 @@ def input_frame() -> int:
     n_g_new = int(input())
     for i in range(n_g_new):
         x, y, value = map(int, input().split(" "))
-        if value < 60: # good of low value
+        if value < 50: # good of low value
             continue
         goods.append(
             Good(
@@ -123,7 +123,7 @@ def input_frame() -> int:
             if robots[i].good_taken == -1:
                 new_target_goods = []
                 for g in goods:
-                    if g.available(frame=frame_id) and g.dis[x][y] <= 100:
+                    if g.available(frame=frame_id) and (g.dis[x][y] <= 400 or g.dis[x][y] < inf and len(new_target_goods) == 0):
                         new_target_goods.append(g.id)
                 robots[i].target_goods = new_target_goods[:]
             else:

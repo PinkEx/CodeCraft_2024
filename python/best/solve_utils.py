@@ -1,8 +1,6 @@
 import random
 import sys
 
-# import numpy as np
-
 from constant import *
 from variable import *
 
@@ -34,9 +32,6 @@ def robot_dispatch(frame_id: int):
         ]
         max_ev = max(esti_values)
         if max_ev > 0:
-            # esti_values = np.where(esti_values < 0, 0, esti_values)
-            # esti_values = func_softmax(esti_values)
-            # d = int(np.random.choice(esti_values, p=esti_values))
             d = esti_values.index(max_ev)
             robots[i].last_dir = d
             p2r[robots[i].pos.x][robots[i].pos.y] = -1
@@ -44,26 +39,41 @@ def robot_dispatch(frame_id: int):
             print("move", i, d)
             sys.stdout.flush()
 
-def boat_dispatch(framd_id: int):
+def boat_dispatch(frame_id: int):
+    ordered_berths = sorted(
+        berths,
+        key=lambda b: sum([goods[g].value for g in b.goods_temp]), # len(b.goods_temp),
+        reverse=True
+    )
+
     for i in range(n_bo):
         if boats[i].pos == -1:
             boats[i].load = 0
             continue
         if boats[i].status == 1:
             berths[boats[i].pos].occupied = i
-        if boats[i].load == boats[i].cap or len(berths[boats[i].pos].goods_temp) == 0:
+        if berths[boats[i].pos].occupied == i and (boats[i].load == boats[i].cap or len(berths[boats[i].pos].goods_temp) == 0):
+            # time_arrival = frame_id + berths[boats[i].pos].ttime
+            # sys.stderr.write(f"boat {i} has a cap of {boats[i].cap}, with a load of {boats[i].load} @ from frame {frame_id} to frame {time_arrival}\n")
             berths[boats[i].pos].occupied = -1
             berths[boats[i].pos].reserved = -1
+            if boats[i].load < boats[i].cap * 4 / 5 and frame_id <= 13000:
+                flag = False
+                for k in range(n_be):
+                    j = ordered_berths[k].id
+                    if berths[j].reserved != -1 or berths[j].occupied != -1: continue
+                    flag = True
+                    berths[j].reserved = i
+                    boats[i].pos = j
+                    print("ship", i, j)
+                    sys.stdout.flush()
+                    break
+                if flag: continue
             boats[i].status = 0
             boats[i].pos = -1
             print("go", i)
             sys.stdout.flush()
 
-    ordered_berths = sorted(
-        berths,
-        key=lambda b: sum([goods[g].value for g in b.goods_temp]), # len(b.goods_temp),
-        reverse=True
-    )
     for k in range(n_be):
         i = ordered_berths[k].id
         if berths[i].reserved != -1 or berths[i].occupied != -1: continue

@@ -2,17 +2,10 @@ import heapq
 import sys
 from typing import List
 
-# import numpy as np
-
 from constant import *
 from variable import *
 
 from position import Position
-
-# def func_softmax(x):
-#     x = np.array(x)
-#     exp_x = np.exp(x - np.max(x))
-#     return exp_x / exp_x.sum(axis=0, keepdims=True)
 
 def func_outside_map(x: int, y: int):
     return x < 0 or x >= len_env or y < 0 or y >= len_env
@@ -31,7 +24,7 @@ def func_p2be(pos: Position):
 
 def func_eval_to_good(ori: Position, pos: Position, target_goods: List[int]):
     scores = [
-        1.0 / (goods[g].dis[pos.x][pos.y] + 0.5) - 1.0 / (goods[g].dis[ori.x][ori.y] + 0.5)
+        1.0 / (goods[g].dis[pos.x - goods[g].pos.x][pos.y - goods[g].pos.y] + 0.5) - 1.0 / (goods[g].dis[ori.x - goods[g].pos.x][ori.y - goods[g].pos.y] + 0.5)
         for g in target_goods
     ]
     scores = heapq.nlargest(4, scores)
