@@ -1,1 +1,1 @@
-.\PreliminaryJudge.exe -m maps\map1.txt "python sdk/main.py"
+.\PreliminaryJudge.exe -m maps\map-3.10.txt "python sdk/main.py"
