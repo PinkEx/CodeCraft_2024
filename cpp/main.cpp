@@ -121,6 +121,7 @@ double func_eval_to_good(Position ori, Position pos, vector<int> target_goods){
 		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
+		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
@@ -145,6 +146,7 @@ double func_eval_to_berth(Position ori, Position pos, vector<int> target_berths)
 		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
+		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
@@ -218,7 +220,7 @@ void get_goods_distance_matrix(Position pos, int dis[][len_env]){
 	while(!q.empty()){
 		Position p = q.front();
 		q.pop();
-		if (dis[p.x][p.y] > 200) return;
+		if (dis[p.x][p.y] > 150) return;
 		for(direction = 0; direction < 4; direction++){
 			int x = p.x + mv[direction][0];
 			int y = p.y + mv[direction][1];
@@ -270,13 +272,14 @@ void pull(Robot &r, int &good_id, int &berth_id){
 }
 
 // compute the score of each direction to choose a better one
-double move(Robot &r, int direction){
+double move(const Robot &r, int direction){
 	if (!r.running) return ninf; // robot not running
 	int x = r.pos.x + mv[direction][0];
 	int y = r.pos.y + mv[direction][1];
 	if (func_outside_map(x, y)) return ninf; // outside the map
 	if (env[x][y] == '#' || env[x][y] == '*') return ninf; // not a land or a berth
-	if (p2r[x][y] >= 0) return ninf;// occupied by other robots
+	if (p2r[x][y] >= 0) return ninf; // occupied by other robots
+	
 	double score = 0;
 	if (r.good_taken != -1){
 		score = func_eval_to_berth(r.pos, Position(x, y), r.target_berths);
@@ -404,7 +407,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 100 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -541,7 +544,6 @@ void boat_dispatch(int frame_id){
 void solve_frame(int frame_id){
 	robot_dispatch(frame_id);
 	boat_dispatch(frame_id);
-	// cerr << "!!!!! " << frame_id << endl;
 	puts("OK");
 	fflush(stdout);
 }

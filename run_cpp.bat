@@ -1,1 +1,1 @@
-PreliminaryJudge.exe -m maps\map-3.12.txt "cpp/main.exe"
+PreliminaryJudge.exe -m maps\map1.txt "cpp/main.exe"
