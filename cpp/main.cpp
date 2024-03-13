@@ -220,7 +220,6 @@ void get_goods_distance_matrix(Position pos, int dis[][len_env]){
 	while(!q.empty()){
 		Position p = q.front();
 		q.pop();
-		if (dis[p.x][p.y] > 150) return;
 		for(direction = 0; direction < 4; direction++){
 			int x = p.x + mv[direction][0];
 			int y = p.y + mv[direction][1];
@@ -407,7 +406,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 100 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
