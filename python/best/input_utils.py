@@ -36,7 +36,7 @@ def preprocess():
             if p2b[i][j] == 0:
                 n_bl += 1
                 search_block(i, j, n_bl)
-
+    sys.stderr.write(f"number of blocks: {n_bl}\n")
 def input_map():
     for i in range(len_env):
         line = input()

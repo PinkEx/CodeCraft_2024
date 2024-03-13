@@ -1,1 +1,1 @@
-.\PreliminaryJudge.exe -m maps\map-3.10.txt "python sdk/main.py"
+.\PreliminaryJudge_win_1.exe -m maps\map-3.11.txt -l ERR "python python/best/main.py"
