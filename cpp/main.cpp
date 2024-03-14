@@ -24,6 +24,7 @@ int mv[4][2] = {
 // variable
 char env[len_env][len_env]; // map information, 2-dimensions
 
+int sum_value = 0; // some of value
 int n_bl = 0; // number of blocks
 int p2b[len_env][len_env]; // block index of each position
 int p2i[len_env][len_env]; // good index of each position
@@ -372,6 +373,9 @@ int Input()
 {
 	int frame_id, money;
     scanf("%d%d", &frame_id, &money);
+	// fstream log_file("log.txt", ios::app);
+	// log_file << frame_id << " " << money << endl;
+	// log_file.close();
     // judging if goods had disappeared
 	for(auto g: goods){
 		if (!available(g, frame_id) and p2i[g.pos.x][g.pos.y] == g.id)
@@ -448,6 +452,7 @@ void robot_dispatch(int frame_id){
 			printf("pull %d\n", i);
 			fflush(stdout);
 			// cerr << "PULL!" << frame_id << " " << i << " " << good_id << " " << berth_id << endl;
+			sum_value += goods[good_id].value;
 			continue;
 		}
 		double max_ev = 0;
@@ -501,11 +506,12 @@ void boat_dispatch(int frame_id){
 		if (boats[i].load == boats[i].cap || berths[boats[i].pos].goods_temp.size() == 0){
 			berths[boats[i].pos].occupied = -1;
 			berths[boats[i].pos].reserved = -1;
-			if (boats[i].load < boats[i].cap * 4 / 5 && frame_id <= 13000) {
+			if (boats[i].load < boats[i].cap * 4 / 5) {
 				flag = false;
 				for(k = 0; k < n_be; k++){
 					j = ordered_berths[k].id;
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
+					if (frame_id + 500 + berths[j].ttime > 14950) continue;
 					flag = true;
 					berths[j].reserved = i;
 					boats[i].pos = j;
@@ -519,6 +525,7 @@ void boat_dispatch(int frame_id){
 			boats[i].pos = -1;
 			printf("go %d\n", i);
 			fflush(stdout);
+			// cerr << boats[i].load << " " << boats[i].cap << endl;
 		}
 	}
 	for(int k = 0; k < n_be; k++){
@@ -558,6 +565,7 @@ int main(){
 		clock_t t2 = clock();
 		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
     }
+	// cerr << sum_value << endl;
 	return 0;
 }
 

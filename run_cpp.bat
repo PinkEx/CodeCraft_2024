@@ -1,1 +1,1 @@
-PreliminaryJudge.exe -m maps\map1.txt -l ERR "cpp/main.exe"
+PreliminaryJudge.exe -m maps\map-3.13.txt -l ERR "cpp/main.exe"
