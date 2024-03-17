@@ -1,1 +1,0 @@
-.\PreliminaryJudge_win_1.exe -m maps\map-3.11.txt -l ERR "python python/best/main.py"

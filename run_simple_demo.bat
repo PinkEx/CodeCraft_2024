@@ -1,1 +1,0 @@
-PreliminaryJudge_win_1.exe -m maps\map1.txt "main.exe"

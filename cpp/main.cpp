@@ -4,7 +4,7 @@ using namespace std;
 #define n_be 10 // number of berths
 #define n_r 10 // number of robots
 #define n_bo 5 // number of boats
-#define esti_n_g 2500 // number of goods(estimated)
+#define esti_n_g 3000 // number of goods(estimated)
 #define n_f 15000 // number of frames
 #define len_env 200 // len of the map
 #define len_window 1000 // len of the goods' appearing window
@@ -191,12 +191,12 @@ void get_berth_distance_matrix(Position pos, int dis[][len_env]){
 }
 
 // load goods
-void load(Berth& be){
+void load(Berth &be){
 	int i;
 	for(i = 0; i < be.lspeed; i++){
 		if(be.goods_temp.size() > 0 && boats[be.occupied].load < boats[be.occupied].cap){
 			int g = be.goods_temp.front();
-			be.goods_temp.pop(); 
+			be.goods_temp.pop();
 			boats[be.occupied].load += 1;
 		} else return;
 	}
@@ -347,6 +347,7 @@ void Init()
 		berths[id].reserved = -1;
 		berths[id].occupied = -1;
     	get_berth_distance_matrix(berths[id].pos, dis2b[id]);
+		// cerr << i << " " << berths[id].ttime << endl;
 	}
 	for(int i = 0; i < n_r; i++){
 		robots[i].id = i;
@@ -356,6 +357,7 @@ void Init()
 	}
 	int boat_capacity;
     scanf("%d", &boat_capacity);
+	cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
 	for(int i = 0; i < n_bo; i++){
 		boats[i].id = i;
 		boats[i].cap = boat_capacity;
@@ -399,6 +401,7 @@ int Input()
         get_goods_distance_matrix(temp.pos, dis2g[temp.id]);
         goods.push_back(temp);
     }
+	// cerr << frame_id << " !!" << endl;
 	// Robots Information
     for(int i = 0; i < n_r; i++){
 		int good_taken, x, y, status;
@@ -422,6 +425,7 @@ int Input()
 			}
 		}
     }
+	// cerr << frame_id << " !!!" << endl;
     // Boats Informatipn
     for(int i = 0; i < n_bo; i ++)
         scanf("%d%d", &boats[i].status, &boats[i].pos);
@@ -498,21 +502,23 @@ void boat_dispatch(int frame_id){
 	}
 	sort(ordered_berths, ordered_berths + n_be, cmp);
 	for(i = 0; i < n_bo; i++){
+		// assert(boats[i].status != 2);
 		if (boats[i].pos == -1){
 			boats[i].load = 0;
 			continue;
 		}
 		if (boats[i].status == 1) berths[boats[i].pos].occupied = i;
 		if (boats[i].load == boats[i].cap || berths[boats[i].pos].goods_temp.size() == 0){
-			berths[boats[i].pos].occupied = -1;
-			berths[boats[i].pos].reserved = -1;
-			if (boats[i].load < boats[i].cap * 4 / 5) {
+			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 4 / 5 && ordered_berths[0].sum > 0) {
 				flag = false;
 				for(k = 0; k < n_be; k++){
 					j = ordered_berths[k].id;
+					if (j == boats[i].pos) continue;
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
-					if (frame_id + 500 + berths[j].ttime > 14950) continue;
+					if (frame_id + 500 + berths[j].ttime > 14900) continue;
 					flag = true;
+					berths[boats[i].pos].occupied = -1;
+					berths[boats[i].pos].reserved = -1;
 					berths[j].reserved = i;
 					boats[i].pos = j;
 					printf("ship %d %d\n", i, j);
@@ -521,16 +527,18 @@ void boat_dispatch(int frame_id){
 				}
 				if (flag) continue;
 			}
+			berths[boats[i].pos].occupied = -1;
+			berths[boats[i].pos].reserved = -1;
 			boats[i].status = 0;
 			boats[i].pos = -1;
 			printf("go %d\n", i);
 			fflush(stdout);
-			// cerr << boats[i].load << " " << boats[i].cap << endl;
 		}
 	}
 	for(int k = 0; k < n_be; k++){
 		i = ordered_berths[k].id;
-		if(berths[i].reserved != -1 || berths[i].occupied != -1) continue;
+		if (berths[i].reserved != -1 || berths[i].occupied != -1) continue;
+		if (frame_id + berths[i].ttime * 2 > 14900) continue;
 		for(j = 0; j < n_bo; j++){
 			if (boats[j].status == 1 && boats[j].pos == -1){
 				berths[i].reserved = j;
@@ -556,7 +564,7 @@ void solve_frame(int frame_id){
 
 int main(){
     Init();
-    for(int frame = 0; frame < 15000; frame++)
+    for(int frame = 1; frame <= 15000; frame++)
     {
 		clock_t t0 = clock();
         int id = Input();
@@ -565,7 +573,6 @@ int main(){
 		clock_t t2 = clock();
 		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
     }
-	// cerr << sum_value << endl;
+	cerr << "{\"sum_value\":" << sum_value << "}" << endl;
 	return 0;
 }
-

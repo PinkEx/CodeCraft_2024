@@ -1,11 +1,11 @@
-map1: ~20.2w
-map2: ~22.5w
-map-3.7: ~24.2w
-map-3.8: ~23.9w
-map-3.9: ~22.5w
-map-3.10: ~18.6w
-map-3.11: ~24.9w
-map-3.12: ~29.6w
-map-3.13: ~24.4w
+mapbyKersen(map0): ~29.0w
+map1(map1): ~20.2w
+map-3.7(map2): ~24.2w
+map-3.8(map3): ~23.9w
+map-3.9(map4): ~22.5w
+map-3.10(map5): ~18.6w
+map-3.11(map6): ~24.9w
+map-3.12(map7): ~29.6w
+map-3.13(map8): ~24.4w
 
-avg: ~23.4w
+avg: ~23.5w
