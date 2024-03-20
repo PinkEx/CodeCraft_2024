@@ -360,7 +360,7 @@ void Init()
 		robots[i].last_dir = -1;
 	}
     scanf("%d", &boat_capacity);
-	// cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
+	cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
 	for(int i = 0; i < n_bo; i++){
 		boats[i].id = i;
 		boats[i].cap = boat_capacity;
@@ -417,7 +417,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 400 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 800 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -516,7 +516,7 @@ void boat_dispatch(int frame_id){
 		if (boats[i].load == boats[i].cap
 		|| berths[boats[i].pos].goods_temp.size() == 0
 		|| frame_id + berths[boats[i].pos].ttime > max_ending_time) {
-			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 0.7 && ordered_berths[0].sum > 0) { // optimal load rate: A HYPERPARAMETER TO SWITCH
+			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 0.8 && ordered_berths[0].sum > 0) { // optimal load rate: A HYPERPARAMETER TO SWITCH
 				flag = false;
 				for(k = 0; k < n_be; k++){
 					j = ordered_berths[k].id;
@@ -524,8 +524,8 @@ void boat_dispatch(int frame_id){
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
 					if (frame_id + interal_transition_time + berths[j].ttime + boat_capacity >= max_ending_time) continue;
 					flag = true;
-					// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-					// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
+					for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+					cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
 					berths[boats[i].pos].occupied = -1;
 					berths[boats[i].pos].reserved = -1;
 					berths[j].reserved = i;
@@ -539,8 +539,8 @@ void boat_dispatch(int frame_id){
 			}
 			if (frame_id < last_transfer_time ||
 			frame_id >= last_transfer_time && (frame_id + berths[boats[i].pos].ttime >= max_ending_time || boats[i].load == boats[i].cap)) {
-				// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-				// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
+				for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+				cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
 				berths[boats[i].pos].occupied = -1;
 				berths[boats[i].pos].reserved = -1;
 				boats[i].status = 0;
@@ -556,7 +556,7 @@ void boat_dispatch(int frame_id){
 		if (frame_id + berths[i].ttime * 2 + boat_capacity >= max_ending_time) continue;
 		for(j = 0; j < n_bo; j++){
 			if (boats[j].status == 1 && boats[j].pos == -1){
-				// cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
+				cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
 				berths[i].reserved = j;
 				boats[j].pos = i;
 				printf("ship %d %d\n", j, i);
@@ -589,8 +589,8 @@ int main(){
 		clock_t t2 = clock();
 		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
 		// if (frame == 14999) {
-		// 	cerr << id << endl;
-		// 	cerr << "{\"sum_value\":" << sum_value << "}" << endl;
+			// cerr << id << endl;
+			// cerr << "{\"sum_value\":" << sum_value << "}" << endl;
 		// }
     }
 	return 0;
