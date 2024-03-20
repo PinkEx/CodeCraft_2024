@@ -30,6 +30,7 @@
 
 6 
 {"boat_capacity":75}
+{"sum_value":287028}
 {"status":"Successful","score":243365}
 
 7 

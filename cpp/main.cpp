@@ -9,6 +9,9 @@ using namespace std;
 #define len_env 200 // len of the map
 #define len_window 1000 // len of the goods' appearing window
 #define len_berth 4 // len of a berth
+#define interal_transition_time 500 // the time boat move from berth to berth
+#define last_transfer_time 13000 // the time threshold after which the boat should go back late
+#define max_ending_time 14995 // the time all boats should finish work
 
 #define gamma 0.3 // candidate decaying rate
 int inf = 0x3f3f3f3f; // infinity
@@ -24,6 +27,7 @@ int mv[4][2] = {
 // variable
 char env[len_env][len_env]; // map information, 2-dimensions
 
+int boat_capacity; // capacity of a boat
 int sum_value = 0; // some of value
 int n_bl = 0; // number of blocks
 int p2b[len_env][len_env]; // block index of each position
@@ -61,6 +65,7 @@ struct Boat{
 	int cap; // total capacity
 	int load; // current load
 	int status; // 0: moving, 1: loading or at virtual point, 2: wating outside a berth
+	int inter_times; // times of inter transition
 };
 
 struct Good{
@@ -118,7 +123,6 @@ double func_eval_to_good(Position ori, Position pos, vector<int> target_goods){
 	double t[3] = {0};
 	for(int g: target_goods){
 		double temp = 1.0 / (dis2g[g][pos.x][pos.y] + 0.5) - 1.0 / (dis2g[g][ori.x][ori.y] + 0.5);
-		// double temp = 1.0 / (goods[g].dis[pos.x][pos.y] + 0.5) - 1.0 / (goods[g].dis[ori.x][ori.y] + 0.5);
 		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
@@ -355,14 +359,14 @@ void Init()
 		robots[i].good_taken = -1;
 		robots[i].last_dir = -1;
 	}
-	int boat_capacity;
     scanf("%d", &boat_capacity);
-	cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
+	// cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
 	for(int i = 0; i < n_bo; i++){
 		boats[i].id = i;
 		boats[i].cap = boat_capacity;
 		boats[i].pos = -1;
 		boats[i].status = 1;
+		boats[i].inter_times = 0;
 	}
 	preprocess();
     char okk[10];
@@ -390,7 +394,7 @@ int Input()
         int x, y, val;
         Good temp;
 		scanf("%d%d%d", &x, &y, &val);
-		if (val < 50) continue; // value too low
+		if (val < 100) continue; // value too low: A HYPERPARAMETER TO SWITCH
         temp.id = goods.size();
         temp.pos.x = x;
         temp.pos.y = y;
@@ -413,7 +417,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 400 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -502,45 +506,57 @@ void boat_dispatch(int frame_id){
 	}
 	sort(ordered_berths, ordered_berths + n_be, cmp);
 	for(i = 0; i < n_bo; i++){
-		// assert(boats[i].status != 2);
-		if (boats[i].pos == -1){
+		if (boats[i].pos == -1){ // transfer the goods back
 			boats[i].load = 0;
+			boats[i].inter_times = 0;
 			continue;
 		}
+		if (boats[i].status == 0) continue; // on transfering
 		if (boats[i].status == 1) berths[boats[i].pos].occupied = i;
-		if (boats[i].load == boats[i].cap || berths[boats[i].pos].goods_temp.size() == 0){
-			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 4 / 5 && ordered_berths[0].sum > 0) {
+		if (boats[i].load == boats[i].cap
+		|| berths[boats[i].pos].goods_temp.size() == 0
+		|| frame_id + berths[boats[i].pos].ttime > max_ending_time) {
+			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 0.7 && ordered_berths[0].sum > 0) { // optimal load rate: A HYPERPARAMETER TO SWITCH
 				flag = false;
 				for(k = 0; k < n_be; k++){
 					j = ordered_berths[k].id;
 					if (j == boats[i].pos) continue;
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
-					if (frame_id + 500 + berths[j].ttime > 14900) continue;
+					if (frame_id + interal_transition_time + berths[j].ttime + boat_capacity >= max_ending_time) continue;
 					flag = true;
+					// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+					// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
 					berths[boats[i].pos].occupied = -1;
 					berths[boats[i].pos].reserved = -1;
 					berths[j].reserved = i;
 					boats[i].pos = j;
+					boats[i].inter_times += 1;
 					printf("ship %d %d\n", i, j);
 					fflush(stdout);
 					break;
 				}
 				if (flag) continue;
 			}
-			berths[boats[i].pos].occupied = -1;
-			berths[boats[i].pos].reserved = -1;
-			boats[i].status = 0;
-			boats[i].pos = -1;
-			printf("go %d\n", i);
-			fflush(stdout);
+			if (frame_id < last_transfer_time ||
+			frame_id >= last_transfer_time && (frame_id + berths[boats[i].pos].ttime >= max_ending_time || boats[i].load == boats[i].cap)) {
+				// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+				// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
+				berths[boats[i].pos].occupied = -1;
+				berths[boats[i].pos].reserved = -1;
+				boats[i].status = 0;
+				boats[i].pos = -1;
+				printf("go %d\n", i);
+				fflush(stdout);
+			}
 		}
 	}
 	for(int k = 0; k < n_be; k++){
 		i = ordered_berths[k].id;
 		if (berths[i].reserved != -1 || berths[i].occupied != -1) continue;
-		if (frame_id + berths[i].ttime * 2 > 14900) continue;
+		if (frame_id + berths[i].ttime * 2 + boat_capacity >= max_ending_time) continue;
 		for(j = 0; j < n_bo; j++){
 			if (boats[j].status == 1 && boats[j].pos == -1){
+				// cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
 				berths[i].reserved = j;
 				boats[j].pos = i;
 				printf("ship %d %d\n", j, i);
@@ -572,7 +588,10 @@ int main(){
 		solve_frame(frame);
 		clock_t t2 = clock();
 		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
+		// if (frame == 14999) {
+		// 	cerr << id << endl;
+		// 	cerr << "{\"sum_value\":" << sum_value << "}" << endl;
+		// }
     }
-	cerr << "{\"sum_value\":" << sum_value << "}" << endl;
 	return 0;
 }

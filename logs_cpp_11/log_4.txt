@@ -204,6 +204,7 @@
 
 35 
 {"boat_capacity":81}
+{"sum_value":249340}
 {"status":"Successful","score":219888}
 
 36 

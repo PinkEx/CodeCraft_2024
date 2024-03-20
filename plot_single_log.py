@@ -1,11 +1,12 @@
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 
 log_id = input()
 
 # 读取数据
 data = []
-with open(f"logs/log_{log_id}.txt", "r") as file:
+with open(f"logs_cpp_13/log_{log_id}.txt", "r") as file:
     lines = file.readlines()
     current_data = {}
     for line in lines:
@@ -30,26 +31,34 @@ sum_values = [entry["sum_value"] for entry in data]
 scores = [entry["score"] for entry in data]
 diff_values = [sum_value - score for sum_value, score in zip(sum_values, scores)]
 
-# Plotting
-fig, ax1 = plt.subplots(figsize=(10, 5))
+# 计算平均值
+avg_boat_capacity = np.mean(boat_capacities)
+avg_sum_value = np.mean(sum_values)
+avg_score = np.mean(scores)
+avg_diff_value = np.mean(diff_values)
 
-color = 'tab:blue'
+# Plotting
+fig, ax1 = plt.subplots(figsize=(9, 6))
+
 ax1.set_xlabel('ID')
-ax1.set_ylabel('Boat Capacity', color=color)
-ax1.plot(ids, boat_capacities, marker='o', linestyle='-', color=color, label='Boat Capacity')
-ax1.tick_params(axis='y', labelcolor=color)
+ax1.set_ylabel('Boat Capacity', color="black")
+ax1.plot(ids, boat_capacities, marker='o', linestyle='-', color="tab:blue", label='Boat Capacity')
+ax1.axhline(y=avg_boat_capacity, color='tab:blue', linestyle='--', label=f'Average: {avg_boat_capacity:.2f}')
+ax1.tick_params(axis='y', labelcolor="black")
 ax1.set_ylim(40, 200)
 
-ax2 = ax1.twinx()  
-color = 'tab:green'
-ax2.set_ylabel('Sum Value and Score', color=color)
-ax2.plot(ids, sum_values, marker='o', linestyle='-', color=color, label='Sum Value')
+ax2 = ax1.twinx()
+ax2.set_ylabel('Sum Value and Score', color="black")
+ax2.plot(ids, sum_values, marker='o', linestyle='-', color="tab:green", label='Sum Value')
+ax2.axhline(y=avg_sum_value, color='green', linestyle='--', label=f'Average: {avg_sum_value:.2f}')
 ax2.plot(ids, scores, marker='o', linestyle='-', color='orange', label='Score')
+ax2.axhline(y=avg_score, color='tab:orange', linestyle='--', label=f'Average: {avg_score:.2f}')
 ax2.plot(ids, diff_values, marker='o', linestyle='-', color='red', label='Difference')
-ax2.tick_params(axis='y', labelcolor=color)
+ax2.axhline(y=avg_diff_value, color='tab:red', linestyle='--', label=f'Average: {avg_diff_value:.2f}')
+ax2.tick_params(axis='y', labelcolor="black")
 
 fig.tight_layout()  
 plt.title('Data Visualization')
-fig.legend(loc='upper right')
+fig.legend(loc='upper right', bbox_to_anchor=(0.75, 0.75))
 plt.grid(True)
 plt.show()

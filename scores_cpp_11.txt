@@ -1,0 +1,12 @@
+mapbyKersen(map0): ~29.4w
+map1(map1): ~20.5w
+map-3.7(map2): ~24.4w
+map-3.8(map3): ~23.6w
+map-3.9(map4): ~22.4w
+map-3.10(map5): ~17.6w
+map-3.11(map6): ~24.3w
+map-3.12(map7): ~28.7w
+map-3.13(map8): ~24.7w
+
+avg0: ~23.3w
+avg1(+map0): ~24.0w
