@@ -360,7 +360,7 @@ void Init()
 		robots[i].last_dir = -1;
 	}
     scanf("%d", &boat_capacity);
-	cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
+	// cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
 	for(int i = 0; i < n_bo; i++){
 		boats[i].id = i;
 		boats[i].cap = boat_capacity;
@@ -394,7 +394,7 @@ int Input()
         int x, y, val;
         Good temp;
 		scanf("%d%d%d", &x, &y, &val);
-		if (val < 100) continue; // value too low: A HYPERPARAMETER TO SWITCH
+		if (val < 150) continue; // value too low: A HYPERPARAMETER TO SWITCH
         temp.id = goods.size();
         temp.pos.x = x;
         temp.pos.y = y;
@@ -524,8 +524,8 @@ void boat_dispatch(int frame_id){
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
 					if (frame_id + interal_transition_time + berths[j].ttime + boat_capacity >= max_ending_time) continue;
 					flag = true;
-					for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-					cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
+					// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+					// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
 					berths[boats[i].pos].occupied = -1;
 					berths[boats[i].pos].reserved = -1;
 					berths[j].reserved = i;
@@ -539,8 +539,8 @@ void boat_dispatch(int frame_id){
 			}
 			if (frame_id < last_transfer_time ||
 			frame_id >= last_transfer_time && (frame_id + berths[boats[i].pos].ttime >= max_ending_time || boats[i].load == boats[i].cap)) {
-				for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-				cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
+				// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
+				// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
 				berths[boats[i].pos].occupied = -1;
 				berths[boats[i].pos].reserved = -1;
 				boats[i].status = 0;
@@ -556,7 +556,7 @@ void boat_dispatch(int frame_id){
 		if (frame_id + berths[i].ttime * 2 + boat_capacity >= max_ending_time) continue;
 		for(j = 0; j < n_bo; j++){
 			if (boats[j].status == 1 && boats[j].pos == -1){
-				cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
+				// cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
 				berths[i].reserved = j;
 				boats[j].pos = i;
 				printf("ship %d %d\n", j, i);
@@ -574,6 +574,20 @@ void boat_dispatch(int frame_id){
 void solve_frame(int frame_id){
 	robot_dispatch(frame_id);
 	boat_dispatch(frame_id);
+	// int i, j;
+	// cerr << "[frame " << frame_id << "]" << endl;	
+	// for(i = 0; i < n_be; i++){
+	// 	cerr << "  berth " << i << ": ";
+	// 	int count = berths[i].goods_temp.size();
+	// 	for(j = 0; j < count; j++){
+	// 		int g_id = berths[i].goods_temp.front();
+	// 		berths[i].goods_temp.pop();
+	// 		berths[i].goods_temp.push(g_id);
+	// 		cerr << goods[g_id].value;
+	// 		if (j < count - 1) cerr << ", ";
+	// 	}
+	// 	cerr << endl;
+	// }
 	puts("OK");
 	fflush(stdout);
 }
