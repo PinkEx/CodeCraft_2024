@@ -10,8 +10,8 @@ using namespace std;
 #define len_window 1000 // len of the goods' appearing window
 #define len_berth 4 // len of a berth
 #define interal_transition_time 500 // the time boat move from berth to berth
-#define last_transfer_time 12700 // the time threshold after which the boat should go back late
-#define max_ending_time 14998 // the time all boats should finish work
+#define last_transfer_time 13000 // the time threshold after which the boat should go back late
+#define max_ending_time 14995 // the time all boats should finish work
 
 #define gamma 0.3 // candidate decaying rate
 int inf = 0x3f3f3f3f; // infinity
@@ -25,7 +25,6 @@ int mv[4][2] = {
 }; // moving shifts: R/L/U/D
 
 // variable
-int T;
 char env[len_env][len_env]; // map information, 2-dimensions
 
 int boat_capacity; // capacity of a boat
@@ -148,15 +147,8 @@ double func_eval_to_berth(Position ori, Position pos, vector<int> target_berths)
 	double score = 0;
 	double t[3] = {0};
 	for(auto b: target_berths){
-		double coe = 1.0;
-		if (T >= last_transfer_time) {
-			if (berths[b].occupied == -1 && berths[b].reserved == -1) coe = 0;
-		} else {
-			// if (berths[b].occupied != -1) coe = 0.95;
-			// else if (berths[b].reserved != -1) coe = 1.05;
-		}
 		double temp = 1.0 / (dis2b[b][pos.x][pos.y] + 0.5) - 1.0 / (dis2b[b][ori.x][ori.y] + 0.5);
-		scores.push(temp * coe);
+		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
 		if (scores.empty()) break;
@@ -402,7 +394,7 @@ int Input()
         int x, y, val;
         Good temp;
 		scanf("%d%d%d", &x, &y, &val);
-		if (val < 120) continue; // value too low: A HYPERPARAMETER TO SWITCH
+		if (val < 150) continue; // value too low: A HYPERPARAMETER TO SWITCH
         temp.id = goods.size();
         temp.pos.x = x;
         temp.pos.y = y;
@@ -425,7 +417,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 800 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -605,11 +597,13 @@ int main(){
     for(int frame = 1; frame <= 15000; frame++)
     {
 		clock_t t0 = clock();
-        T = Input();
+        int id = Input();
 		clock_t t1 = clock();
 		solve_frame(frame);
 		clock_t t2 = clock();
+		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
 		// if (frame == 14999) {
+			// cerr << id << endl;
 			// cerr << "{\"sum_value\":" << sum_value << "}" << endl;
 		// }
     }

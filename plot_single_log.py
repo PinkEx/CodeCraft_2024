@@ -6,7 +6,7 @@ log_id = input()
 
 # 读取数据
 data = []
-with open(f"logs_cpp_13/log_{log_id}.txt", "r") as file:
+with open(f"logs_cpp_12/log_{log_id}.txt", "r") as file:
     lines = file.readlines()
     current_data = {}
     for line in lines:
@@ -36,6 +36,9 @@ avg_boat_capacity = np.mean(boat_capacities)
 avg_sum_value = np.mean(sum_values)
 avg_score = np.mean(scores)
 avg_diff_value = np.mean(diff_values)
+
+# avg_score1 = np.mean(scores[:1] + scores[:23])
+# print(avg_score1)
 
 # Plotting
 fig, ax1 = plt.subplots(figsize=(9, 6))

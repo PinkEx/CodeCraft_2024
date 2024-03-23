@@ -27,7 +27,7 @@ scores1 = read_file('logs_cpp_11/')
 scores2 = read_file('logs_cpp_12/')
 scores3 = read_file('logs_cpp_13/')
 scores4 = read_file('logs_cpp_14/')
-scores5 = read_file('logs/')
+scores5 = read_file('logs_cpp_15/')
 
 # 计算平均值
 average1 = calculate_average(scores1)
@@ -35,6 +35,8 @@ average2 = calculate_average(scores2)
 average3 = calculate_average(scores3)
 average4 = calculate_average(scores4)
 average5 = calculate_average(scores5)
+
+print(average5)
 
 # 设置ID
 ids = list(range(1, len(scores1) + 1))

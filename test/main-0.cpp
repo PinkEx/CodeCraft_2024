@@ -4,14 +4,11 @@ using namespace std;
 #define n_be 10 // number of berths
 #define n_r 10 // number of robots
 #define n_bo 5 // number of boats
-#define esti_n_g 3000 // number of goods(estimated)
+#define esti_n_g 2500 // number of goods(estimated)
 #define n_f 15000 // number of frames
 #define len_env 200 // len of the map
 #define len_window 1000 // len of the goods' appearing window
 #define len_berth 4 // len of a berth
-#define interal_transition_time 500 // the time boat move from berth to berth
-#define last_transfer_time 12700 // the time threshold after which the boat should go back late
-#define max_ending_time 14998 // the time all boats should finish work
 
 #define gamma 0.3 // candidate decaying rate
 int inf = 0x3f3f3f3f; // infinity
@@ -25,11 +22,8 @@ int mv[4][2] = {
 }; // moving shifts: R/L/U/D
 
 // variable
-int T;
 char env[len_env][len_env]; // map information, 2-dimensions
 
-int boat_capacity; // capacity of a boat
-int sum_value = 0; // some of value
 int n_bl = 0; // number of blocks
 int p2b[len_env][len_env]; // block index of each position
 int p2i[len_env][len_env]; // good index of each position
@@ -66,7 +60,6 @@ struct Boat{
 	int cap; // total capacity
 	int load; // current load
 	int status; // 0: moving, 1: loading or at virtual point, 2: wating outside a berth
-	int inter_times; // times of inter transition
 };
 
 struct Good{
@@ -124,10 +117,10 @@ double func_eval_to_good(Position ori, Position pos, vector<int> target_goods){
 	double t[3] = {0};
 	for(int g: target_goods){
 		double temp = 1.0 / (dis2g[g][pos.x][pos.y] + 0.5) - 1.0 / (dis2g[g][ori.x][ori.y] + 0.5);
+		// double temp = 1.0 / (goods[g].dis[pos.x][pos.y] + 0.5) - 1.0 / (goods[g].dis[ori.x][ori.y] + 0.5);
 		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
-		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
@@ -148,18 +141,10 @@ double func_eval_to_berth(Position ori, Position pos, vector<int> target_berths)
 	double score = 0;
 	double t[3] = {0};
 	for(auto b: target_berths){
-		double coe = 1.0;
-		if (T >= last_transfer_time) {
-			if (berths[b].occupied == -1 && berths[b].reserved == -1) coe = 0;
-		} else {
-			// if (berths[b].occupied != -1) coe = 0.95;
-			// else if (berths[b].reserved != -1) coe = 1.05;
-		}
 		double temp = 1.0 / (dis2b[b][pos.x][pos.y] + 0.5) - 1.0 / (dis2b[b][ori.x][ori.y] + 0.5);
-		scores.push(temp * coe);
+		scores.push(temp);
 	}
 	for(int i = 0; i < 3; i++){
-		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
@@ -203,12 +188,12 @@ void get_berth_distance_matrix(Position pos, int dis[][len_env]){
 }
 
 // load goods
-void load(Berth &be){
+void load(Berth& be){
 	int i;
 	for(i = 0; i < be.lspeed; i++){
 		if(be.goods_temp.size() > 0 && boats[be.occupied].load < boats[be.occupied].cap){
 			int g = be.goods_temp.front();
-			be.goods_temp.pop();
+			be.goods_temp.pop(); 
 			boats[be.occupied].load += 1;
 		} else return;
 	}
@@ -233,6 +218,7 @@ void get_goods_distance_matrix(Position pos, int dis[][len_env]){
 	while(!q.empty()){
 		Position p = q.front();
 		q.pop();
+		if (dis[p.x][p.y] > 200) return;
 		for(direction = 0; direction < 4; direction++){
 			int x = p.x + mv[direction][0];
 			int y = p.y + mv[direction][1];
@@ -284,14 +270,13 @@ void pull(Robot &r, int &good_id, int &berth_id){
 }
 
 // compute the score of each direction to choose a better one
-double move(const Robot &r, int direction){
+double move(Robot &r, int direction){
 	if (!r.running) return ninf; // robot not running
 	int x = r.pos.x + mv[direction][0];
 	int y = r.pos.y + mv[direction][1];
 	if (func_outside_map(x, y)) return ninf; // outside the map
 	if (env[x][y] == '#' || env[x][y] == '*') return ninf; // not a land or a berth
-	if (p2r[x][y] >= 0) return ninf; // occupied by other robots
-	
+	if (p2r[x][y] >= 0) return ninf;// occupied by other robots
 	double score = 0;
 	if (r.good_taken != -1){
 		score = func_eval_to_berth(r.pos, Position(x, y), r.target_berths);
@@ -359,7 +344,6 @@ void Init()
 		berths[id].reserved = -1;
 		berths[id].occupied = -1;
     	get_berth_distance_matrix(berths[id].pos, dis2b[id]);
-		// cerr << i << " " << berths[id].ttime << endl;
 	}
 	for(int i = 0; i < n_r; i++){
 		robots[i].id = i;
@@ -367,14 +351,13 @@ void Init()
 		robots[i].good_taken = -1;
 		robots[i].last_dir = -1;
 	}
+	int boat_capacity;
     scanf("%d", &boat_capacity);
-	// cerr << "{\"boat_capacity\":" << boat_capacity << "}" << endl;
 	for(int i = 0; i < n_bo; i++){
 		boats[i].id = i;
 		boats[i].cap = boat_capacity;
 		boats[i].pos = -1;
 		boats[i].status = 1;
-		boats[i].inter_times = 0;
 	}
 	preprocess();
     char okk[10];
@@ -387,9 +370,6 @@ int Input()
 {
 	int frame_id, money;
     scanf("%d%d", &frame_id, &money);
-	// fstream log_file("log.txt", ios::app);
-	// log_file << frame_id << " " << money << endl;
-	// log_file.close();
     // judging if goods had disappeared
 	for(auto g: goods){
 		if (!available(g, frame_id) and p2i[g.pos.x][g.pos.y] == g.id)
@@ -402,7 +382,7 @@ int Input()
         int x, y, val;
         Good temp;
 		scanf("%d%d%d", &x, &y, &val);
-		if (val < 120) continue; // value too low: A HYPERPARAMETER TO SWITCH
+		if (val < 50) continue; // value too low
         temp.id = goods.size();
         temp.pos.x = x;
         temp.pos.y = y;
@@ -413,7 +393,6 @@ int Input()
         get_goods_distance_matrix(temp.pos, dis2g[temp.id]);
         goods.push_back(temp);
     }
-	// cerr << frame_id << " !!" << endl;
 	// Robots Information
     for(int i = 0; i < n_r; i++){
 		int good_taken, x, y, status;
@@ -425,7 +404,7 @@ int Input()
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0))
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -437,7 +416,6 @@ int Input()
 			}
 		}
     }
-	// cerr << frame_id << " !!!" << endl;
     // Boats Informatipn
     for(int i = 0; i < n_bo; i ++)
         scanf("%d%d", &boats[i].status, &boats[i].pos);
@@ -468,7 +446,6 @@ void robot_dispatch(int frame_id){
 			printf("pull %d\n", i);
 			fflush(stdout);
 			// cerr << "PULL!" << frame_id << " " << i << " " << good_id << " " << berth_id << endl;
-			sum_value += goods[good_id].value;
 			continue;
 		}
 		double max_ev = 0;
@@ -514,57 +491,39 @@ void boat_dispatch(int frame_id){
 	}
 	sort(ordered_berths, ordered_berths + n_be, cmp);
 	for(i = 0; i < n_bo; i++){
-		if (boats[i].pos == -1){ // transfer the goods back
+		if (boats[i].pos == -1){
 			boats[i].load = 0;
-			boats[i].inter_times = 0;
 			continue;
 		}
-		if (boats[i].status == 0) continue; // on transfering
 		if (boats[i].status == 1) berths[boats[i].pos].occupied = i;
-		if (boats[i].load == boats[i].cap
-		|| berths[boats[i].pos].goods_temp.size() == 0
-		|| frame_id + berths[boats[i].pos].ttime > max_ending_time) {
-			if (boats[i].status == 1 && boats[i].load < boats[i].cap * 0.8 && ordered_berths[0].sum > 0) { // optimal load rate: A HYPERPARAMETER TO SWITCH
+		if (boats[i].load == boats[i].cap || berths[boats[i].pos].goods_temp.size() == 0){
+			berths[boats[i].pos].occupied = -1;
+			berths[boats[i].pos].reserved = -1;
+			if (boats[i].load < boats[i].cap * 4 / 5 && frame_id <= 13000) {
 				flag = false;
 				for(k = 0; k < n_be; k++){
 					j = ordered_berths[k].id;
-					if (j == boats[i].pos) continue;
 					if (berths[j].reserved != -1 || berths[j].occupied != -1) continue;
-					if (frame_id + interal_transition_time + berths[j].ttime + boat_capacity >= max_ending_time) continue;
 					flag = true;
-					// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-					// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth " << j << ",  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << endl;
-					berths[boats[i].pos].occupied = -1;
-					berths[boats[i].pos].reserved = -1;
 					berths[j].reserved = i;
 					boats[i].pos = j;
-					boats[i].inter_times += 1;
 					printf("ship %d %d\n", i, j);
 					fflush(stdout);
 					break;
 				}
 				if (flag) continue;
 			}
-			if (frame_id < last_transfer_time ||
-			frame_id >= last_transfer_time && (frame_id + berths[boats[i].pos].ttime >= max_ending_time || boats[i].load == boats[i].cap)) {
-				// for (int _ = 0; _ < boats[i].inter_times; ++_) cerr << '*';
-				// cerr << "boat " << i << ", berth " << boats[i].pos << " to berth -1,  @ frame " << frame_id << ": " << boats[i].load << "/" << boats[i].cap << ", #inter-trans = " << boats[i].inter_times << endl;
-				berths[boats[i].pos].occupied = -1;
-				berths[boats[i].pos].reserved = -1;
-				boats[i].status = 0;
-				boats[i].pos = -1;
-				printf("go %d\n", i);
-				fflush(stdout);
-			}
+			boats[i].status = 0;
+			boats[i].pos = -1;
+			printf("go %d\n", i);
+			fflush(stdout);
 		}
 	}
 	for(int k = 0; k < n_be; k++){
 		i = ordered_berths[k].id;
-		if (berths[i].reserved != -1 || berths[i].occupied != -1) continue;
-		if (frame_id + berths[i].ttime * 2 + boat_capacity >= max_ending_time) continue;
+		if(berths[i].reserved != -1 || berths[i].occupied != -1) continue;
 		for(j = 0; j < n_bo; j++){
 			if (boats[j].status == 1 && boats[j].pos == -1){
-				// cerr << "boat " << j << ", berth " << boats[j].pos << " to berth " << i << ",  @ frame " << frame_id << ": " << boats[j].load << "/" << boats[j].cap << endl;
 				berths[i].reserved = j;
 				boats[j].pos = i;
 				printf("ship %d %d\n", j, i);
@@ -582,36 +541,22 @@ void boat_dispatch(int frame_id){
 void solve_frame(int frame_id){
 	robot_dispatch(frame_id);
 	boat_dispatch(frame_id);
-	// int i, j;
-	// cerr << "[frame " << frame_id << "]" << endl;	
-	// for(i = 0; i < n_be; i++){
-	// 	cerr << "  berth " << i << ": ";
-	// 	int count = berths[i].goods_temp.size();
-	// 	for(j = 0; j < count; j++){
-	// 		int g_id = berths[i].goods_temp.front();
-	// 		berths[i].goods_temp.pop();
-	// 		berths[i].goods_temp.push(g_id);
-	// 		cerr << goods[g_id].value;
-	// 		if (j < count - 1) cerr << ", ";
-	// 	}
-	// 	cerr << endl;
-	// }
+	// cerr << "!!!!! " << frame_id << endl;
 	puts("OK");
 	fflush(stdout);
 }
 
 int main(){
     Init();
-    for(int frame = 1; frame <= 15000; frame++)
+    for(int frame = 0; frame < 15000; frame++)
     {
 		clock_t t0 = clock();
-        T = Input();
+        int id = Input();
 		clock_t t1 = clock();
 		solve_frame(frame);
 		clock_t t2 = clock();
-		// if (frame == 14999) {
-			// cerr << "{\"sum_value\":" << sum_value << "}" << endl;
-		// }
+		// cerr << "<<<<<<<< " << frame << " " << 1.0 * (t1 - t0) / CLOCKS_PER_SEC * 1000 << " " << 1.0 * (t2 - t1) / CLOCKS_PER_SEC * 1000 << ">>>>>>>>" << endl;
     }
 	return 0;
 }
+
