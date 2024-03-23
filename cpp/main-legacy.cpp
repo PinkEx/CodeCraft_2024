@@ -13,6 +13,7 @@ using namespace std;
 #define last_transfer_time 12700 // the time threshold after which the boat should go back late
 #define max_ending_time 14998 // the time all boats should finish work
 
+#define gamma 0.3 // candidate decaying rate
 int inf = 0x3f3f3f3f; // infinity
 int ninf = -1e7; // negative infinity
 
@@ -25,7 +26,6 @@ int mv[4][2] = {
 
 // variable
 int T, M;
-double G; // candidate decaying rate
 char env[len_env][len_env]; // map information, 2-dimensions
 
 int boat_capacity; // capacity of a boat
@@ -37,8 +37,6 @@ int p2r[len_env][len_env]; // robot id of each position, -1 when not occupied
 
 int dis2g[esti_n_g][len_env][len_env];
 int dis2b[n_be][len_env][len_env];
-int targeted[n_r]; // no target: -1, otherwise: target good id
-int temp_target[n_r][4];
 
 // definition about things
 struct Position {
@@ -118,39 +116,24 @@ int func_p2be(Position pos){
 	purpose: to decide which direction would be better
 	ori: the original position of the robot,
 	pos: the changed position of the robot,
-	target_goods: the robot's target goods,
-	r_id: the robots's id
+	target_goods: the robot's target goods
 */
-double func_eval_to_good(Position ori, Position pos, vector<int> target_goods, int r_id, int direction){
+int num_candidate = 3;
+double func_eval_to_good(Position ori, Position pos, vector<int> target_goods){
 	priority_queue<double> scores;
-	int index = 0;
-	int i;
-	double max_t = 0;
 	double score = 0;
-	double t[3] = {0};
-	temp_target[r_id][direction] = -1;
+	double t[num_candidate] = {0};
 	for(int g: target_goods){
-		if(M == 2){
-			for(i = 0; i < n_r; i++){
-				if(i != r_id && targeted[i] == g) break;
-			}
-			if(i < r_id) continue;
-		}
 		double temp = 1.0 / (dis2g[g][pos.x][pos.y] + 0.5) - 1.0 / (dis2g[g][ori.x][ori.y] + 0.5);
 		scores.push(temp);
-		if(temp > max_t){
-			index = g;
-			max_t = temp;
-		}
 	}
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < num_candidate; i++){
 		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
-	if(max_t > 0) temp_target[r_id][direction] = index;
-	for(int i = 2; i >= 0; i--){
-		score = score * G + max(t[i], 0.0);
+	for(int i = num_candidate - 1; i >= 0; i--){
+		score = score * gamma + max(t[i], 0.0);
 	}
 	return score;
 }
@@ -164,22 +147,25 @@ double func_eval_to_good(Position ori, Position pos, vector<int> target_goods, i
 double func_eval_to_berth(Position ori, Position pos, vector<int> target_berths){
 	priority_queue<double> scores;
 	double score = 0;
-	double t[3] = {0};
+	double t[num_candidate] = {0};
 	for(auto b: target_berths){
 		double coe = 1.0;
-		if (T >= last_transfer_time) {
+		if (T + 100 >= last_transfer_time) {
 			if (berths[b].occupied == -1 && berths[b].reserved == -1) coe = 0;
+		} else {
+			// if (berths[b].occupied != -1) coe = 0.95;
+			// else if (berths[b].reserved != -1) coe = 1.05;
 		}
 		double temp = 1.0 / (dis2b[b][pos.x][pos.y] + 0.5) - 1.0 / (dis2b[b][ori.x][ori.y] + 0.5);
 		scores.push(temp * coe);
 	}
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < num_candidate; i++){
 		if (scores.empty()) break;
 		t[i] = scores.top();
 		scores.pop();
 	}
-	for(int i = 2; i >= 0; i--){
-		score = score * G + max(t[i], 0.0);
+	for(int i = num_candidate - 1; i >= 0; i--){
+		score = score * gamma + max(t[i], 0.0);
 	}
 	return score;
 }
@@ -311,7 +297,7 @@ double move(const Robot &r, int direction){
 	if (r.good_taken != -1){
 		score = func_eval_to_berth(r.pos, Position(x, y), r.target_berths);
 	} else {
-		score = func_eval_to_good(r.pos, Position(x, y), r.target_goods, r.id, direction);
+		score = func_eval_to_good(r.pos, Position(x, y), r.target_goods);
 	}
 	if (r.last_dir == direction) score *= 1.001; // encourage to keep diretcion
 	else if ((r.last_dir ^ direction) == 1) score *= 0.001; // discourage to turn back
@@ -360,21 +346,13 @@ void Init()
 	memset(p2b, 0, sizeof p2b);
 	memset(p2i, -1, sizeof p2i);
 	memset(p2r, -1, sizeof p2r);
-	memset(targeted, -1, sizeof targeted);
 	// input map
     for(int i = 0; i < len_env; i++){
     	scanf("%s", &env[i]);
 	}
-	if (env[74][74] == 'B') {
-		M = 1;
-		G = 0.3;
-	} else if (env[74][74] == '#') {
-		M = 2;
-		G = 0.942;
-	} else {
-		M = 3;
-		G = 0.355;
-	}
+	if (env[74][74] == 'B') M = 1;
+	else if (env[74][74] == '#') M = 2;
+	else M = 3;
 	// input information of the berth
     for(int i = 0; i < n_be; i++)
     {
@@ -422,7 +400,7 @@ int Input()
 			p2i[g.pos.x][g.pos.y] = -1;
 	}
 	// Goods Information
-    int num; double val_threshold = (M == 1 ? 80: M == 2 ? 60: 120);
+    int num; double val_threshold = (M == 1 ? 80: M == 2 ? 150: 120);
     scanf("%d", &num);
     for(int i = 0; i < num; i++){
         int x, y, val;
@@ -450,8 +428,9 @@ int Input()
         if (robots[i].running) {
         	if (robots[i].good_taken == -1){
         		robots[i].target_goods.clear();
+				int dis_threshold = 200;
 				for(Good g: goods) {
-					if (available(g, frame_id) && (dis2g[g.id][x][y] <= 200 || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
+					if (available(g, frame_id) && (dis2g[g.id][x][y] <= dis_threshold || dis2g[g.id][x][y] <= inf && robots[i].target_goods.size() == 0)) // distance too large: A HYPERPARAMETER TO SWITCH
 						robots[i].target_goods.push_back(g.id);
 				}
 			} else {
@@ -504,8 +483,6 @@ void robot_dispatch(int frame_id){
 			if(max_ev < esti_value){
 				max_ev = esti_value;
 				d = j;
-				if(robots[i].good_taken != -1) targeted[i] = -1;
-				else targeted[i] = temp_target[i][d];
 			}
 		}
 		if (max_ev > 0){
@@ -552,7 +529,7 @@ void boat_dispatch(int frame_id){
 		if (boats[i].load == boats[i].cap
 		|| berths[boats[i].pos].goods_temp.size() == 0
 		|| frame_id + berths[boats[i].pos].ttime > max_ending_time) {
-			double load_threshold = (M == 2 ? 0.96: 0.8);
+			double load_threshold = (M == 1 ? 0.8: M == 2 ? 0.85: 0.8);
 			if (boats[i].status == 1 && boats[i].load < boats[i].cap * load_threshold && ordered_berths[0].sum > 0) { // optimal load rate: A HYPERPARAMETER TO SWITCH
 				flag = false;
 				for(k = 0; k < n_be; k++){
@@ -611,20 +588,6 @@ void boat_dispatch(int frame_id){
 void solve_frame(int frame_id){
 	robot_dispatch(frame_id);
 	boat_dispatch(frame_id);
-	// int i, j;
-	// cerr << "[frame " << frame_id << "]" << endl;	
-	// for(i = 0; i < n_be; i++){
-	// 	cerr << "  berth " << i << ": ";
-	// 	int count = berths[i].goods_temp.size();
-	// 	for(j = 0; j < count; j++){
-	// 		int g_id = berths[i].goods_temp.front();
-	// 		berths[i].goods_temp.pop();
-	// 		berths[i].goods_temp.push(g_id);
-	// 		cerr << goods[g_id].value;
-	// 		if (j < count - 1) cerr << ", ";
-	// 	}
-	// 	cerr << endl;
-	// }
 	puts("OK");
 	fflush(stdout);
 }
@@ -639,7 +602,8 @@ int main(){
 		solve_frame(frame);
 		clock_t t2 = clock();
 		// if (frame == 14999) {
-			// cerr << "{\"sum_value\":" << sum_value << "}" << endl;
+		// 	cerr << "Map ID: " << M << endl;
+		// 	cerr << "{\"sum_value\":" << sum_value << "}" << endl;
 		// }
     }
 	return 0;
