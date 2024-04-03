@@ -10,6 +10,7 @@ int money, sum_value;
 // environment
 char env[constants::len_env][constants::len_env];
 int which_berth[constants::len_env][constants::len_env];
+int which_boat[constants::len_env][constants::len_env];
 int which_good[constants::len_env][constants::len_env];
 int which_robot[constants::len_env][constants::len_env];
 std::vector <Position> terminals;
@@ -18,7 +19,7 @@ std::vector <Position> terminals;
 std::vector <Berth> berths;
 
 // boat
-int boat_capacity;
+int boat_capacity, load_threshold;
 std::vector <Boat> boats;
 std::vector <Position> boat_spawn_points;
 

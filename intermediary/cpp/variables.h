@@ -20,6 +20,7 @@ extern int money, sum_value;
 // environment
 extern char env[constants::len_env][constants::len_env];
 extern int which_berth[constants::len_env][constants::len_env];
+extern int which_boat[constants::len_env][constants::len_env];
 extern int which_good[constants::len_env][constants::len_env];
 extern int which_robot[constants::len_env][constants::len_env];
 extern std::vector <Position> terminals;
@@ -28,7 +29,7 @@ extern std::vector <Position> terminals;
 extern std::vector <Berth> berths;
 
 // boat
-extern int boat_capacity;
+extern int boat_capacity, load_threshold;
 extern std::vector <Boat> boats;
 extern std::vector <Position> boat_spawn_points;
 

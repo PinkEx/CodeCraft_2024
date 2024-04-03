@@ -54,18 +54,23 @@ void get_distance_from_berth(int berth_id) {
     // get_water_distance
     memset(berths[berth_id].water_dis, 0x3f, sizeof berths[berth_id].water_dis);
     memset(in_queue_d, false, sizeof in_queue_d);
-    for (d = 0; d < 4; d++) {
-        if (!check_still(berths[berth_id].pos, d)) continue;
-        berths[berth_id].water_dis[d][berths[berth_id].pos.x][berths[berth_id].pos.y] = 0;
-        in_queue_d[d][berths[berth_id].pos.x][berths[berth_id].pos.y] = true;
-        q_d.push(std::make_pair(d, berths[berth_id].pos));
+    for (x = 0; x < constants::len_env; x++) {
+        for (y = 0; y < constants::len_env; y++) {
+            if (which_berth[x][y] != berth_id) continue;
+            for (d = 0; d < 4; d++) {
+                if (!check_still(Position(x, y), d)) continue;
+                berths[berth_id].water_dis[d][x][y] = 0;
+                in_queue_d[d][x][y] = true;
+                q_d.push(std::make_pair(d, Position(x, y)));
+            }
+        }
     }
     while (!q_d.empty()) {
 		d = q_d.front().first, p = q_d.front().second;
         q_d.pop(), in_queue_d[d][p.x][p.y] = false;
         w = time_cost(p, d);
         // check SHIP
-        if (check_ship(p, d, -1)) {
+        if (check_ship(p, d, -1) > 0) {
             x = p.x - constants::mv[d][0], y = p.y - constants::mv[d][1];
             if (berths[berth_id].water_dis[d][x][y] > berths[berth_id].water_dis[d][p.x][p.y] + w) {
                 berths[berth_id].water_dis[d][x][y] = berths[berth_id].water_dis[d][p.x][p.y] + w;
@@ -77,7 +82,7 @@ void get_distance_from_berth(int berth_id) {
         }
         // check ROT
         for (r = 0; r < 2; r++) {
-            if (check_rotate(p, d, r, -1)) {
+            if (check_rotate(p, d, r, -1) > 0) {
                 x = p.x, y = p.y, nd = d;
                 for (t = 1; t <= 3; t++) {
                     x += constants::rot[r][nd][0];
@@ -114,7 +119,7 @@ void get_distance_from_terminal() {
         q_d.pop(), in_queue_d[d][p.x][p.y] = false;
         w = time_cost(p, d);
         // check SHIP
-        if (check_ship(p, d, -1)) {
+        if (check_ship(p, d, -1) > 0) {
             x = p.x - constants::mv[d][0], y = p.y - constants::mv[d][1];
             if (dis_terminal[d][x][y] > dis_terminal[d][p.x][p.y] + w) {
                 dis_terminal[d][x][y] = dis_terminal[d][p.x][p.y] + w;
@@ -126,7 +131,7 @@ void get_distance_from_terminal() {
         }
         // check ROT
         for (r = 0; r < 2; r++) {
-            if (check_rotate(p, d, r, -1)) {
+            if (check_rotate(p, d, r, -1) > 0) {
                 x = p.x, y = p.y, nd = d;
                 for (t = 1; t <= 3; t++) {
                     x += constants::rot[r][nd][0];
@@ -151,8 +156,9 @@ void preprocess() {
     get_distance_from_terminal();
 }
 void init() {
-    memset(which_good, -1, sizeof which_good);
     memset(which_berth, -1, sizeof which_berth);
+    memset(which_boat, -1, sizeof which_boat);
+    memset(which_good, -1, sizeof which_good);
     memset(which_robot, -1, sizeof which_robot);
     // input starts
     robot_spawn_points.clear();
@@ -178,6 +184,7 @@ void init() {
         berths.emplace_back(Berth(id, Position(x, y), velocity));
     }
     scanf("%d", &boat_capacity);
+    load_threshold = int(boat_capacity * 0.9);
     // input ends
 	preprocess();
     confirm_ok(true, true);
@@ -219,7 +226,7 @@ void input_frame(int frame_id) {
             which_good[x][y] = -1;
         } else {
             int id = goods.size();
-            if (v < 20) continue;
+            if (v < 40) continue;
             goods.emplace_back(Good(id, Position(x, y), v));
             which_good[x][y] = id;
             get_distance_from_good(id);
@@ -272,15 +279,17 @@ void input_frame(int frame_id) {
     for (auto &boat: boats) {
         x = boat.pos.x, y = boat.pos.y, d = boat.d;
         if (~boat.target) continue;
-        if (!boat.enough_load(boat_capacity * 0.75)) {
-            int min_dis = constants::inf;
+        if (!boat.enough_load(load_threshold)) {
+            int max_num = 0;
             for (auto &berth: berths) {
                 if (berth.received_goods.empty()) continue;
-                if (min_dis > berth.water_dis[d][x][y]) {
-                    min_dis = berth.water_dis[d][x][y];
+                if (~berth.reserved) continue;
+                if (max_num < berth.received_goods.size() && berth.water_dis[d][x][y] < constants::inf) {
+                    max_num = berth.received_goods.size();
                     boat.target = berth.id;
                 }
             }
+            if (~boat.target) berths[boat.target].reserved = boat.id;
         } else boat.target = -2;
     }
     confirm_ok(true, false);
@@ -332,43 +341,59 @@ void robot_dispatch(int frame_id) {
 	}
 }
 void boat_dispatch(int frame_id) {
-    int berth_id;
+    int berth_id, boat_id, x, y;
+    for (x = 0; x < constants::len_env; x++) {
+        for (y = 0; y < constants::len_env; y++) {
+            which_boat[x][y] = -1;
+        }
+    }
+    for (auto &boat: boats) {
+        arrive(boat);
+    }
     for (auto &boat: boats) {
         berth_id = which_berth[boat.pos.x][boat.pos.y];
         if (boat.status == 1) continue;
         if (boat.status == 2) {
-            if (!boat.enough_load(boat_capacity * 0.75) && !berths[berth_id].received_goods.empty()) {
+            if (!boat.enough_load(load_threshold) && !berths[berth_id].received_goods.empty()) {
+                // std::cerr << boat.load << ' ' << load_threshold << std::endl;
                 load(berths[berth_id]);
             } else {
+                depart(boat);
+                berths[berth_id].reserved = -1;
                 berths[berth_id].occupied = -1;
                 printf("dept %d\n", boat.id);
                 fflush(stdout);
             }
             continue;
         }
-        if (berth_id != -1 && boat.target == berth_id) {
+        if (berth_id != -1 && boat.target == berth_id && berths[berth_id].occupied == -1) {
+            depart(boat);
             berths[berth_id].occupied = boat.id;
             boat.target = -1;
             printf("berth %d\n", boat.id);
             fflush(stdout);
             continue;
         }
+        // std::cerr << '@' << frame_id << ' ' << boat.id << ": " << boat.pos.x << ' ' << boat.pos.y << ' ' << boat.d << ' ' << boat.load << std::endl;
+        // std::cerr << boat.status << ' ' << boat.target << ' ' << berth_id << std::endl;
         if (boat.target >= 0) {
+            depart(boat);
             go(boat);
+            arrive(boat);
         } else if (boat.target == -2) {
-            // std::cerr << "? " << frame_id << ' ' << boat.pos.x << ' ' << boat.pos.y << ' ' << boat.d << "   " << boat.load << ' ' << dis_terminal[boat.d][boat.pos.x][boat.pos.y] << std::endl;
             if (dis_terminal[boat.d][boat.pos.x][boat.pos.y] == 0) {
                 boat.target = -1;
                 boat.load = 0;
             } else {
+                depart(boat);
                 back(boat);
+                arrive(boat);
             }
-            // std::cerr << "! " << frame_id << ' ' << boat.pos.x << ' ' << boat.pos.y << ' ' << boat.d << "   " << boat.load << ' ' << dis_terminal[boat.d][boat.pos.x][boat.pos.y] << std::endl;
         }
     }
 }
 void labour_purchase(int frame_id) {
-    if (frame_id - last_purchase_robot > 20 && money >= constants::robot_cost && robots.size() < 12) {
+    if (frame_id - last_purchase_robot > 20 && money >= constants::robot_cost && robots.size() < 14) {
         last_purchase_robot = frame_id;
         std::random_shuffle(robot_spawn_points.begin(), robot_spawn_points.end());
         for (auto pos: robot_spawn_points) {

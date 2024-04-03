@@ -61,7 +61,7 @@ void lboat(Position pos) {
 // berth
 void load(Berth &berth) {
     for (int i = 0; i < berth.velocity; i++) {
-        if (!berth.received_goods.empty() && !boats[berth.occupied].enough_load(boat_capacity * 0.75)) {
+        if (!berth.received_goods.empty() && !boats[berth.occupied].enough_load(load_threshold)) {
             berth.received_goods.pop();
             boats[berth.occupied].load += 1;
         } else return;
@@ -133,6 +133,30 @@ double move(const Robot &r, int d) {
 }
 
 // boat
+void depart(Boat boat) {
+    static Position p;
+    for (int i = 0; i < 6; i++) {
+        p = Position(
+            boat.pos.x + constants::rel_to_core[boat.d][i][0],
+            boat.pos.y + constants::rel_to_core[boat.d][i][1]
+        );
+        if (which_boat[p.x][p.y] == boat.id) {
+            which_boat[p.x][p.y] = -1;
+        }
+    }
+}
+
+void arrive(Boat boat) {
+    static Position p;
+    for (int i = 0; i < 6; i++) {
+        p = Position(
+            boat.pos.x + constants::rel_to_core[boat.d][i][0],
+            boat.pos.y + constants::rel_to_core[boat.d][i][1]
+        );
+        which_boat[p.x][p.y] = boat.id;
+    }
+}
+
 inline int new_direction(int d, int r) { // r: 0-clockwise, 1-anti-clockwise
     if (d == 0) return r ? 2 : 3;
     else if (d == 1) return r ? 3 : 2;
@@ -165,8 +189,8 @@ bool check_still(Position pos, int d) {
     return true;
 }
 
-bool check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-inverse-transform
-    static Position p;
+int_least16_t check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-inverse-transform // return value: -1: meet, 0: inaccessible, 1: OK
+    static Position p; bool meet = false;
     pos.x += constants::mv[d][0] * flag;
     pos.y += constants::mv[d][1] * flag;
     for (int i = 0; i < 6; i++) {
@@ -174,14 +198,17 @@ bool check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-in
             pos.x + constants::rel_to_core[d][i][0],
             pos.y + constants::rel_to_core[d][i][1]
         );
-        if (outside_map(p)) return false;
-        if (!boat_zone(p)) return false;
+        if (outside_map(p)) return 0;
+        if (!boat_zone(p)) return 0;
+        if (flag > 0 && ~which_boat[p.x][p.y]) {
+            if (rapid_zone(p)) meet = true;
+        }
     }
-    return true;
+    return meet ? -1: 1;
 }
 
-bool check_rotate(Position pos, int d, int r, int flag = 1) { // flag: 1-transform, -1-inverse-transform
-    static Position p; int nd;
+int check_rotate(Position pos, int d, int r, int flag = 1) { // flag: 1-transform, -1-inverse-transform
+    static Position p; int nd; bool meet = false;
     if (flag > 0) {
         pos.x += constants::rot[r][d][0];
         pos.y += constants::rot[r][d][1];
@@ -199,16 +226,22 @@ bool check_rotate(Position pos, int d, int r, int flag = 1) { // flag: 1-transfo
             pos.x + constants::rel_to_core[nd][i][0],
             pos.y + constants::rel_to_core[nd][i][1]
         );
-        if (outside_map(p)) return false;
-        if (!boat_zone(p)) return false;
+        if (outside_map(p)) return 0;
+        if (!boat_zone(p)) return 0;
+        if (flag > 0 && ~which_boat[p.x][p.y]) {   
+            if (rapid_zone(p)) meet = true;
+        }
     }
-    return true;
+    return meet ? -1 : 1;
 }
 
 void go(Boat &boat) {
-    static Position p;
+    static Position p, q; int sgn_straight, sgn_rot_left, sgn_rot_right;
     int berth_id = boat.target, min_dis = constants::inf, cs = -2, w, r, nd;
-    if (check_ship(boat.pos, boat.d)) {
+    sgn_straight = check_ship(boat.pos, boat.d);
+    sgn_rot_left = check_rotate(boat.pos, boat.d, 1);
+    sgn_rot_right = check_rotate(boat.pos, boat.d, 0);
+    if (sgn_straight > 0) {
         p = Position(
             boat.pos.x + constants::mv[boat.d][0],
             boat.pos.y + constants::mv[boat.d][1]
@@ -220,20 +253,24 @@ void go(Boat &boat) {
             cs = -1;
         }
     }
-    for (r = 0; r < 2; r++) {
-        if (!check_rotate(boat.pos, boat.d, r)) continue;
-        p = Position(
-            boat.pos.x + constants::rot[r][boat.d][0],
-            boat.pos.y + constants::rot[r][boat.d][1]
-        );
-        nd = new_direction(boat.d, r);
-        w = time_cost(p, nd);
-        // std::cerr << "> " << p.x << ' ' << p.y << ' ' << r << ' ' << nd << ' ' << berths[berth_id].water_dis[nd][p.x][p.y] << ' ' << w << std::endl;
-        if (min_dis > berths[berth_id].water_dis[nd][p.x][p.y] + w) {
-            min_dis = berths[berth_id].water_dis[nd][p.x][p.y] + w;
-            cs = r;
+    if (sgn_straight != 1 || ~sgn_rot_left && ~sgn_rot_right) {
+        for (r = 0; r < 2; r++) {
+            if (r == 0 && sgn_rot_right != 1) continue;
+            if (r == 1 && sgn_rot_left != 1) continue;
+            p = Position(
+                boat.pos.x + constants::rot[r][boat.d][0],
+                boat.pos.y + constants::rot[r][boat.d][1]
+            );
+            nd = new_direction(boat.d, r);
+            w = time_cost(p, nd);
+            // std::cerr << "> " << p.x << ' ' << p.y << ' ' << r << ' ' << nd << ' ' << berths[berth_id].water_dis[nd][p.x][p.y] << ' ' << w << std::endl;
+            if (min_dis > berths[berth_id].water_dis[nd][p.x][p.y] + w) {
+                min_dis = berths[berth_id].water_dis[nd][p.x][p.y] + w;
+                cs = r;
+            }
         }
     }
+    // std::cerr << boat.id << ' ' << boat.pos.x << ' ' << boat.pos.y << ' ' << boat.d << " ||| " << sgn_straight << ' ' << sgn_rot_left << ' ' << sgn_rot_right << ' ' << cs << ' ' << min_dis << std::endl;
     if (cs == -1) {
         printf("ship %d\n", boat.id);
         fflush(stdout);
@@ -254,9 +291,12 @@ void go(Boat &boat) {
 }
 
 void back(Boat &boat) {
-    static Position p;
+    static Position p; int sgn_straight, sgn_rot_left, sgn_rot_right;
     int w, min_dis = constants::inf, cs = -2, r, nd;
-    if (check_ship(boat.pos, boat.d)) {
+    sgn_straight = check_ship(boat.pos, boat.d);
+    sgn_rot_left = check_rotate(boat.pos, boat.d, 1);
+    sgn_rot_right = check_rotate(boat.pos, boat.d, 0);
+    if (sgn_straight > 0) {
         p = Position(
             boat.pos.x + constants::mv[boat.d][0],
             boat.pos.y + constants::mv[boat.d][1]
@@ -267,20 +307,23 @@ void back(Boat &boat) {
             cs = -1;
         }
     }
-    for (r = 0; r < 2; r++) {
-        if (!check_rotate(boat.pos, boat.d, r)) continue;
-        p = Position(
-            boat.pos.x + constants::rot[r][boat.d][0],
-            boat.pos.y + constants::rot[r][boat.d][1]
-        );
-        nd = new_direction(boat.d, r);
-        w = time_cost(p, nd);
-        if (min_dis > dis_terminal[nd][p.x][p.y] + w) {
-            min_dis = dis_terminal[nd][p.x][p.y] + w;
-            cs = r;
+    if (sgn_straight != 1 || ~sgn_rot_left && ~sgn_rot_right) {
+        for (r = 0; r < 2; r++) {
+            if (r == 0 && sgn_rot_right != 1) continue;
+            if (r == 1 && sgn_rot_left != 1) continue;
+            p = Position(
+                boat.pos.x + constants::rot[r][boat.d][0],
+                boat.pos.y + constants::rot[r][boat.d][1]
+            );
+            nd = new_direction(boat.d, r);
+            w = time_cost(p, nd);
+            if (min_dis > dis_terminal[nd][p.x][p.y] + w) {
+                min_dis = dis_terminal[nd][p.x][p.y] + w;
+                cs = r;
+            }
         }
     }
-    // std::cerr << "! " << cs << ' ' << min_dis << std::endl;
+    // std::cerr << boat.id << ' ' << boat.pos.x << ' ' << boat.pos.y << ' ' << boat.d << " ||| " << sgn_straight << ' ' << sgn_rot_left << ' ' << sgn_rot_right << ' ' << cs << ' ' << min_dis << std::endl;
     if (cs == -1) {
         printf("ship %d\n", boat.id);
         fflush(stdout);
