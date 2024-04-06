@@ -184,7 +184,7 @@ void init() {
         berths.emplace_back(Berth(id, Position(x, y), velocity));
     }
     scanf("%d", &boat_capacity);
-    load_threshold = int(boat_capacity * 0.9);
+    load_threshold = int(boat_capacity);
     // input ends
 	preprocess();
     confirm_ok(true, true);
@@ -251,7 +251,7 @@ void input_frame(int frame_id) {
             }
             if (robot.target_goods.empty()) continue;
             sort(robot.target_goods.begin(), robot.target_goods.end(), [x, y](int e, int f) {
-                return goods[e].dis[x][y] < goods[f].dis[x][y];
+                return goods[e].value / pow(1.0 + goods[e].dis[x][y], 0.3) > goods[f].value / pow(1.0 + goods[f].dis[x][y], 0.3);
             });
             int closest = *robot.target_goods.begin();
             if (~robot.matched_good && closest != robot.matched_good) goods[robot.matched_good].pursuer = -1;
@@ -311,7 +311,8 @@ void robot_dispatch(int frame_id) {
 		if (good_id != -1) {
             sum_value += goods[good_id].value;
             berths[berth_id].received_goods.push(good_id);
-			printf("pull %d\n", robot.id); 
+            // std::cerr << "+ " << goods[good_id].value << std::endl;
+			printf("pull %d\n", robot.id);
 			fflush(stdout);
 			continue;
 		}
@@ -355,7 +356,6 @@ void boat_dispatch(int frame_id) {
         if (boat.status == 1) continue;
         if (boat.status == 2) {
             if (!boat.enough_load(load_threshold) && !berths[berth_id].received_goods.empty()) {
-                // std::cerr << boat.load << ' ' << load_threshold << std::endl;
                 load(berths[berth_id]);
             } else {
                 depart(boat);
@@ -393,7 +393,7 @@ void boat_dispatch(int frame_id) {
     }
 }
 void labour_purchase(int frame_id) {
-    if (frame_id - last_purchase_robot > 20 && money >= constants::robot_cost && robots.size() < 14) {
+    if (frame_id - last_purchase_robot > 20 && money >= constants::robot_cost && robots.size() < 16) {
         last_purchase_robot = frame_id;
         std::random_shuffle(robot_spawn_points.begin(), robot_spawn_points.end());
         for (auto pos: robot_spawn_points) {
@@ -427,9 +427,16 @@ int main() {
     while (scanf("%d", &frame_id) != EOF) {
         input_frame(frame_id);
         solve_frame(frame_id);
-        if (frame_id == 14999) {
-            std::cerr << "sum_value = " << sum_value << std::endl;
-        }
+        // if (frame_id == 14999) {
+            // for (auto berth: berths) {
+            //     std::cerr << berth.id << std::endl;
+            //     while (!berth.received_goods.empty()) {
+            //         std::cerr << "| " << goods[berth.received_goods.front()].value << std::endl;
+            //         berth.received_goods.pop();
+            //     }
+            // }
+            // std::cerr << "sum_value = " << sum_value << std::endl;
+        // }
     }
     return 0;
 }

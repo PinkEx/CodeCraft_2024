@@ -21,6 +21,9 @@ inline bool robot_zone(Position pos) {
 inline bool boat_zone(Position pos) {
     return std::count(constants::boat_zone_flag.begin(), constants::boat_zone_flag.end(), env[pos.x][pos.y]);
 }
+inline bool non_collision_zone(Position pos) {
+    return env[pos.x][pos.y] != '.' && env[pos.x][pos.y] != '*' && env[pos.x][pos.y] != 'C';
+}
 inline bool rapid_zone(Position pos) {
     return env[pos.x][pos.y] == '*' || env[pos.x][pos.y] == 'C';
 }
@@ -62,6 +65,7 @@ void lboat(Position pos) {
 void load(Berth &berth) {
     for (int i = 0; i < berth.velocity; i++) {
         if (!berth.received_goods.empty() && !boats[berth.occupied].enough_load(load_threshold)) {
+            // std::cerr << "* " << goods[berth.received_goods.front()].value << std::endl;
             berth.received_goods.pop();
             boats[berth.occupied].load += 1;
         } else return;
@@ -120,7 +124,7 @@ double move(const Robot &r, int d) {
 	int x = r.pos.x + constants::mv[d][0], y = r.pos.y + constants::mv[d][1];
     if (outside_map(Position(x, y))) return constants::ninf;
     if (!robot_zone(Position(x, y))) return constants::ninf;
-    if (which_robot[x][y] >= 0) return constants::ninf;
+    if ((!non_collision_zone(r.pos) || !non_collision_zone(Position(x, y))) && which_robot[x][y] >= 0) return constants::ninf;
     double score = 0;
     if (~r.good_taken) {
         score = eval_berths(r.pos, Position(x, y), r.target_berths);
@@ -189,7 +193,7 @@ bool check_still(Position pos, int d) {
     return true;
 }
 
-int_least16_t check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-inverse-transform // return value: -1: meet, 0: inaccessible, 1: OK
+int check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-inverse-transform // return value: -1: meet, 0: inaccessible, 1: OK
     static Position p; bool meet = false;
     pos.x += constants::mv[d][0] * flag;
     pos.y += constants::mv[d][1] * flag;
