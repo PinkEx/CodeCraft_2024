@@ -241,6 +241,7 @@ void input_frame(int frame_id) {
     for (auto &robot: robots) {
         x = robot.pos.x, y = robot.pos.y;
         if (robot.good_taken == -1) {
+            // std::cerr << frame_id << "??\n";
             if (~robot.matched_good && !goods[robot.matched_good].available) robot.matched_good = -1;
             robot.target_goods.clear();
             for (auto &good: goods) {
@@ -251,12 +252,13 @@ void input_frame(int frame_id) {
             }
             if (robot.target_goods.empty()) continue;
             sort(robot.target_goods.begin(), robot.target_goods.end(), [x, y](int e, int f) {
-                return goods[e].value / pow(1.0 + goods[e].dis[x][y], 0.3) > goods[f].value / pow(1.0 + goods[f].dis[x][y], 0.3);
+                return goods[e].value / sqrt(1.0 + goods[e].dis[x][y]) > goods[f].value / sqrt(1.0 + goods[f].dis[x][y]);
             });
             int closest = *robot.target_goods.begin();
             if (~robot.matched_good && closest != robot.matched_good) goods[robot.matched_good].pursuer = -1;
             goods[closest].pursuer = robot.id;
             robot.matched_good = closest;
+            // std::cerr << frame_id << "!!\n";
         } else {
             robot.target_berths.clear();
             for (auto &berth: berths) {
@@ -397,13 +399,13 @@ void labour_purchase(int frame_id) {
         last_purchase_robot = frame_id;
         std::random_shuffle(robot_spawn_points.begin(), robot_spawn_points.end());
         for (auto pos: robot_spawn_points) {
-            if (true) {
+            if (which_robot[pos.x][pos.y] == -1) {
                 lbot(pos);
                 break;
             }
         }
     }
-    if (frame_id - last_purchase_boat > 40 && money >= constants::boat_cost && boats.size() < 1) {
+    if (frame_id - last_purchase_boat > 1000 && money >= constants::boat_cost && boats.size() < 2) {
         last_purchase_boat = frame_id;
         std::random_shuffle(boat_spawn_points.begin(), boat_spawn_points.end());
         for (auto pos: boat_spawn_points) {

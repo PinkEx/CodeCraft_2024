@@ -204,16 +204,16 @@ int check_ship(Position pos, int d, int flag = 1) { // flag: 1-transform, -1-inv
         );
         if (outside_map(p)) return 0;
         if (!boat_zone(p)) return 0;
-        if (flag > 0 && ~which_boat[p.x][p.y]) {
+        if (flag >= 0 && ~which_boat[p.x][p.y]) {
             if (rapid_zone(p)) meet = true;
         }
     }
-    return meet ? -1: 1;
+    return meet ? -1 : 1;
 }
 
 int check_rotate(Position pos, int d, int r, int flag = 1) { // flag: 1-transform, -1-inverse-transform
     static Position p; int nd; bool meet = false;
-    if (flag > 0) {
+    if (flag >= 0) {
         pos.x += constants::rot[r][d][0];
         pos.y += constants::rot[r][d][1];
         nd = new_direction(d, r);
@@ -232,7 +232,7 @@ int check_rotate(Position pos, int d, int r, int flag = 1) { // flag: 1-transfor
         );
         if (outside_map(p)) return 0;
         if (!boat_zone(p)) return 0;
-        if (flag > 0 && ~which_boat[p.x][p.y]) {   
+        if (flag >= 0 && ~which_boat[p.x][p.y]) {   
             if (rapid_zone(p)) meet = true;
         }
     }
@@ -259,6 +259,7 @@ void go(Boat &boat) {
     }
     if (sgn_straight != 1 || ~sgn_rot_left && ~sgn_rot_right) {
         for (r = 0; r < 2; r++) {
+            if (r == 1 && sgn_straight == -1) continue;
             if (r == 0 && sgn_rot_right != 1) continue;
             if (r == 1 && sgn_rot_left != 1) continue;
             p = Position(
@@ -300,7 +301,7 @@ void back(Boat &boat) {
     sgn_straight = check_ship(boat.pos, boat.d);
     sgn_rot_left = check_rotate(boat.pos, boat.d, 1);
     sgn_rot_right = check_rotate(boat.pos, boat.d, 0);
-    if (sgn_straight > 0) {
+    if (sgn_straight == 1) {
         p = Position(
             boat.pos.x + constants::mv[boat.d][0],
             boat.pos.y + constants::mv[boat.d][1]
@@ -313,6 +314,7 @@ void back(Boat &boat) {
     }
     if (sgn_straight != 1 || ~sgn_rot_left && ~sgn_rot_right) {
         for (r = 0; r < 2; r++) {
+            if (r == 1 && sgn_straight == -1) continue;
             if (r == 0 && sgn_rot_right != 1) continue;
             if (r == 1 && sgn_rot_left != 1) continue;
             p = Position(
